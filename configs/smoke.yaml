@@ -1,0 +1,36 @@
+simulation:
+  initial_targets: 2
+  max_targets: 4
+  birth_rate: 0.05
+  survival_probability: 0.98
+  detection_probability: 0.9
+  process_noise: 0.1
+  measurement_noise: 0.1
+  clutter_rate: 2.0
+model:
+  window_size: 4
+  hidden_dim: 32
+  num_heads: 4
+  encoder_layers: 2
+  decoder_layers: 2
+  feedforward_dim: 64
+  dropout: 0.0
+  num_detection_queries: 4
+  prediction_hidden_dim: 16
+  prediction_layers: 2
+  max_tracks: 4
+training:
+  seed: 3
+  device: cpu
+  batch_size: 2
+  clip_windows: 2
+  updates: 2
+  learning_rate: 0.0002
+  lr_patience: 5
+  checkpoint_interval: 1
+  log_interval: 1
+  output_dir: outputs/smoke
+evaluation:
+  monte_carlo_runs: 2
+  trajectory_steps: 8
+  warmup_windows: 1

@@ -1,0 +1,10 @@
+simulation:
+  initial_targets: 10
+  max_targets: 16
+  birth_rate: 0.12
+  survival_probability: 0.97
+  detection_probability: 0.85
+  process_noise: 0.08
+  measurement_noise: 0.03
+  clutter_rate: 15.0
+

@@ -1,0 +1,59 @@
+# Frozen Track-MT3 training profile used by the full-capacity baseline.
+simulation:
+  process_noise: 0.08
+  measurement_noise: 0.03
+  initial_targets: 8
+  birth_rate: 0.08
+  survival_probability: 0.98
+model:
+  auxiliary_loss: true
+  teacher_force_matched_queries: true
+  spatial_encoding: sinusoidal
+  spatial_encoding_temperature: 20.0
+  encoder_position_every_layer: true
+  reference_query_embedding: once
+  detach_reference_between_layers: false
+  contrastive_classifier: true
+  contrastive_temperature: 0.1
+  contrastive_learnable_temperature: true
+  detection_threshold: 0.75
+  tracking_threshold: 0.9
+  # This profile predates the tentative/confirmed lifecycle. Every propagated query used
+  # tracking_threshold=0.9; enabling the newer default changes its metrics.
+  track_confirmation_enabled: false
+loss:
+  reduction: mean
+  localization_weight: 1.0
+  confidence_weight: 1.0
+  confidence_positive_weight: 3.0
+  auxiliary_matching: per_layer
+  auxiliary_weight: 1.0
+  auxiliary_layer_weighting: progressive
+  contrastive_weight: 1.0
+  newborn_weight: 0.3
+  age_ramp: 5
+training:
+  curriculum_warmup_steps: 5000
+  batch_size: 64
+  clip_windows: 8
+  teacher_forcing_start: 0.9
+  teacher_forcing_end: 0.2
+  teacher_forcing_decay_steps: 15000
+  updates: 40000
+  learning_rate: 0.0002
+  gradient_clip_norm: 100.0
+  cold_start_clip_probability: 0.5
+  lr_patience: 4
+  checkpoint_interval: 2000
+  checkpoint_keep: 3
+  validation_interval: 1000
+  early_stopping_patience: 6
+  early_stopping_min_delta: 0.005
+  early_stopping_metric: mean_pro_gospa
+  wandb_enabled: true
+  wandb_project: track-mt3
+  wandb_run_name: track-mt3
+  wandb_log_interval: 1
+  evaluate_on_checkpoint: true
+  evaluation_dataset_dir: datasets/track_mt3_paper/evaluation
+  output_dir: outputs/track_mt3

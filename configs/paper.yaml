@@ -1,0 +1,58 @@
+simulation:
+  dt: 0.1
+  field_of_view: [-10.0, 10.0, -10.0, 10.0]
+  initial_targets: 4
+  max_targets: 16
+  birth_rate: 0.01
+  survival_probability: 0.95
+  detection_probability: 0.9
+  process_noise: 0.5
+  measurement_noise: 0.1
+  clutter_rate: 10.0
+model:
+  window_size: 20
+  hidden_dim: 256
+  num_heads: 8
+  encoder_layers: 6
+  decoder_layers: 6
+  feedforward_dim: 2048
+  dropout: 0.1
+  num_detection_queries: 16
+  prediction_hidden_dim: 128
+  prediction_layers: 3
+  iterative_refinement: true
+  auxiliary_loss: true
+  temporal_encoding: learned
+  qtm_enabled: true
+  qtm_source: prediction
+  detection_threshold: 0.75
+  tracking_threshold: 0.5
+  max_tracks: 16
+loss:
+  localization_weight: 1.0
+  confidence_weight: 1.0
+  auxiliary_weight: 1.0
+  matching_state_weight: 1.0
+  matching_class_weight: 1.0
+training:
+  seed: 0
+  device: auto
+  batch_size: 32
+  clip_windows: 4
+  updates: 50000
+  learning_rate: 0.0002
+  lr_patience: 5000
+  lr_factor: 0.5
+  gradient_clip_norm: 0.1
+  checkpoint_interval: 1000
+  log_interval: 50
+  output_dir: outputs/paper
+evaluation:
+  gospa_cutoff: 2.0
+  gospa_order: 1
+  gospa_alpha: 2.0
+  existence_threshold: 0.75
+  monte_carlo_runs: 50
+  trajectory_steps: 100
+  warmup_windows: 1
+
