@@ -13,7 +13,7 @@ import yaml
 
 import _bootstrap  # noqa: F401
 
-from track_mt3.evaluation import load_trajectory
+from track_mt3.evaluation import load_operating_point, load_trajectory
 from track_mt3.metrics import gospa, pro_gospa
 from track_mt3.models_v17 import (
     EndToEndRecursiveTracker,
@@ -206,28 +206,63 @@ def main() -> None:
         "--config", default="configs/training/cnsf_exact12k.yaml"
     )
     parser.add_argument("--checkpoint", required=True)
+    parser.add_argument(
+        "--operating-points",
+        default="configs/evaluation/operating_points.yaml",
+    )
     parser.add_argument("--runs", type=int, default=10)
     parser.add_argument(
         "--scenes",
         default="scenario1,scenario2,scenario3",
         help="comma-separated evaluation scenes",
     )
-    parser.add_argument("--candidate-thresholds", default="0.35,0.5,0.65")
-    parser.add_argument("--output-thresholds", default="0.68")
-    parser.add_argument("--existence-thresholds", default="0.5")
-    parser.add_argument("--confirmation-hits", default="1,2")
-    parser.add_argument("--death-state-modes", default="oracle_pre")
-    parser.add_argument("--retention-thresholds", default="0.5")
-    parser.add_argument("--survival-warmup-frames", type=int, default=0)
-    parser.add_argument("--confirmed-association-biases", default="0.0")
-    parser.add_argument("--truth-free-model-input", action="store_true")
-    parser.add_argument("--fast-inference", action="store_true")
+    parser.add_argument("--candidate-thresholds")
+    parser.add_argument("--output-thresholds")
+    parser.add_argument("--existence-thresholds")
+    parser.add_argument("--confirmation-hits")
+    parser.add_argument("--death-state-modes")
+    parser.add_argument("--retention-thresholds")
+    parser.add_argument("--survival-warmup-frames", type=int)
+    parser.add_argument("--confirmed-association-biases")
+    parser.add_argument(
+        "--truth-free-model-input", action=argparse.BooleanOptionalAction, default=None
+    )
+    parser.add_argument(
+        "--fast-inference", action=argparse.BooleanOptionalAction, default=None
+    )
     parser.add_argument("--inference-sinkhorn-iterations", type=int)
     parser.add_argument("--first-scored-frame", type=int, default=20)
     parser.add_argument(
         "--output", default="outputs/cnsf/evaluation.json"
     )
     arguments = parser.parse_args()
+    point = load_operating_point(arguments.operating_points, "cnsf")
+    arguments.candidate_thresholds = arguments.candidate_thresholds or str(
+        point["candidate"]
+    )
+    arguments.output_thresholds = arguments.output_thresholds or str(point["output"])
+    arguments.existence_thresholds = arguments.existence_thresholds or str(
+        point["existence"]
+    )
+    arguments.confirmation_hits = arguments.confirmation_hits or str(
+        point["confirmation_hits"]
+    )
+    arguments.death_state_modes = arguments.death_state_modes or str(
+        point["death_state_mode"]
+    )
+    arguments.retention_thresholds = arguments.retention_thresholds or str(
+        point["retention"]
+    )
+    if arguments.survival_warmup_frames is None:
+        arguments.survival_warmup_frames = int(point["survival_warmup_frames"])
+    arguments.confirmed_association_biases = (
+        arguments.confirmed_association_biases
+        or str(point["confirmed_association_bias"])
+    )
+    if arguments.truth_free_model_input is None:
+        arguments.truth_free_model_input = bool(point["truth_free_model_input"])
+    if arguments.fast_inference is None:
+        arguments.fast_inference = bool(point["fast_inference"])
     if arguments.fast_inference and not arguments.truth_free_model_input:
         raise ValueError("--fast-inference requires --truth-free-model-input")
     with Path(arguments.config).open("r", encoding="utf-8") as handle:

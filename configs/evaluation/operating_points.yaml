@@ -1,0 +1,21 @@
+# Global validation-selected operating points. These settings are frozen across
+# S1, S2, and S3; do not tune them separately by evaluation scene.
+track_mt3:
+  existence: 0.75
+  tracking: 0.90
+
+track_mt3_cm:
+  existence: 0.85
+  tracking: 0.95
+
+cnsf:
+  candidate: 0.325
+  output: 0.68
+  existence: 0.55
+  confirmation_hits: 2
+  death_state_mode: predicted
+  retention: 0.225
+  survival_warmup_frames: 3
+  confirmed_association_bias: 0.0
+  truth_free_model_input: true
+  fast_inference: true

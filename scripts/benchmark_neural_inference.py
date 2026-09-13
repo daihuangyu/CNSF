@@ -14,7 +14,7 @@ import yaml
 
 from track_mt3.config_merge import load_merged_config
 from track_mt3.data.window import build_sliding_windows
-from track_mt3.evaluation import load_trajectory
+from track_mt3.evaluation import load_operating_point, load_trajectory
 from track_mt3.models import TrackMT3
 from track_mt3.models_v17 import EndToEndRecursiveTracker, V17BConfig
 from track_mt3.models_v17.batching import pad_current_frames
@@ -98,6 +98,8 @@ def benchmark_cnsf(
     candidate_threshold: float,
     existence_threshold: float,
     retention_threshold: float,
+    confirmation_hits: int,
+    survival_warmup_frames: int,
 ) -> dict:
     config = yaml.safe_load(config_path.read_text())
     model_config = V17BConfig(**config["model"])
@@ -124,9 +126,9 @@ def benchmark_cnsf(
                 frame_time,
                 state,
                 birth_candidate_threshold=candidate_threshold,
-                confirmation_hits=2,
+                confirmation_hits=confirmation_hits,
                 retention_threshold=retention_threshold,
-                survival_warmup_frames=3,
+                survival_warmup_frames=survival_warmup_frames,
             )
             probability = output.existing_logits[0].sigmoid()
             keep = (
@@ -183,12 +185,34 @@ def main() -> None:
         default="outputs/cnsf_exact12k/checkpoints/step_012000.pt",
     )
     parser.add_argument("--compile-association", action="store_true")
+    parser.add_argument(
+        "--operating-points",
+        default="configs/evaluation/operating_points.yaml",
+    )
     parser.add_argument("--first-scored-frame", type=int, default=20)
-    parser.add_argument("--candidate-threshold", type=float, default=0.325)
-    parser.add_argument("--existence-threshold", type=float, default=0.55)
-    parser.add_argument("--retention-threshold", type=float, default=0.225)
+    parser.add_argument("--candidate-threshold", type=float)
+    parser.add_argument("--existence-threshold", type=float)
+    parser.add_argument("--retention-threshold", type=float)
     parser.add_argument("--output", required=True)
     arguments = parser.parse_args()
+    cnsf_point = load_operating_point(arguments.operating_points, "cnsf")
+    candidate_threshold = (
+        arguments.candidate_threshold
+        if arguments.candidate_threshold is not None
+        else float(cnsf_point["candidate"])
+    )
+    existence_threshold = (
+        arguments.existence_threshold
+        if arguments.existence_threshold is not None
+        else float(cnsf_point["existence"])
+    )
+    retention_threshold = (
+        arguments.retention_threshold
+        if arguments.retention_threshold is not None
+        else float(cnsf_point["retention"])
+    )
+    confirmation_hits = int(cnsf_point["confirmation_hits"])
+    survival_warmup_frames = int(cnsf_point["survival_warmup_frames"])
 
     selected = [name.strip() for name in arguments.models.split(",")]
     allowed = {"track_mt3", "cnsf"}
@@ -234,9 +258,11 @@ def main() -> None:
             Path(arguments.cnsf_checkpoint),
             arguments.compile_association,
             arguments.first_scored_frame,
-            arguments.candidate_threshold,
-            arguments.existence_threshold,
-            arguments.retention_threshold,
+            candidate_threshold,
+            existence_threshold,
+            retention_threshold,
+            confirmation_hits,
+            survival_warmup_frames,
         )
     output_path = Path(arguments.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)

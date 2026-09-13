@@ -14,7 +14,7 @@ import _bootstrap  # noqa: F401
 from track_mt3.config import resolve_device
 from track_mt3.config_merge import load_merged_config
 from track_mt3.data.window import build_sliding_windows
-from track_mt3.evaluation import evaluate_model, load_trajectory
+from track_mt3.evaluation import evaluate_model, load_operating_point, load_trajectory
 from track_mt3.metrics.tgospa import trajectory_gospa
 from track_mt3.models import TrackMT3
 
@@ -114,16 +114,31 @@ def main() -> None:
     parser.add_argument("--expected-step", type=int, default=12_000)
     parser.add_argument("--dataset-dir", type=Path, required=True)
     parser.add_argument("--runs", type=int, default=50)
-    parser.add_argument("--existence-threshold", type=float, required=True)
-    parser.add_argument("--tracking-threshold", type=float, required=True)
+    parser.add_argument(
+        "--operating-points",
+        default="configs/evaluation/operating_points.yaml",
+    )
+    parser.add_argument("--existence-threshold", type=float)
+    parser.add_argument("--tracking-threshold", type=float)
     parser.add_argument("--first-scored-frame", type=int, default=20)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
+    point = load_operating_point(args.operating_points, args.method)
+    existence_threshold = (
+        args.existence_threshold
+        if args.existence_threshold is not None
+        else float(point["existence"])
+    )
+    tracking_threshold = (
+        args.tracking_threshold
+        if args.tracking_threshold is not None
+        else float(point["tracking"])
+    )
     config = load_merged_config(args.config, *args.overlay)
-    config.evaluation.existence_threshold = args.existence_threshold
-    config.model.detection_threshold = args.existence_threshold
-    config.model.tracking_threshold = args.tracking_threshold
+    config.evaluation.existence_threshold = existence_threshold
+    config.model.detection_threshold = existence_threshold
+    config.model.tracking_threshold = tracking_threshold
     device = torch.device(resolve_device(config.training.device))
     checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=False)
     checkpoint_step = int(checkpoint.get("training_state", {}).get("step", -1))
@@ -160,9 +175,9 @@ def main() -> None:
         "checkpoint_step": checkpoint_step,
         "parameters": sum(parameter.numel() for parameter in model.parameters()),
         "operating_point": {
-            "existence": args.existence_threshold,
-            "qtm_detection": args.existence_threshold,
-            "qtm_tracking": args.tracking_threshold,
+            "existence": existence_threshold,
+            "qtm_detection": existence_threshold,
+            "qtm_tracking": tracking_threshold,
         },
         "runs_per_scene": args.runs,
         "first_scored_frame": args.first_scored_frame,

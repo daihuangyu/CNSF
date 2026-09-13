@@ -12,7 +12,7 @@ import yaml
 
 import _bootstrap  # noqa: F401
 
-from track_mt3.evaluation import load_trajectory
+from track_mt3.evaluation import load_operating_point, load_trajectory
 from track_mt3.metrics import trajectory_gospa
 from track_mt3.models_v17 import EndToEndRecursiveTracker, V17BConfig
 from track_mt3.models_v17.batching import pad_current_frames
@@ -96,17 +96,32 @@ def main() -> None:
         default="configs/training/cnsf_exact12k.yaml",
     )
     parser.add_argument("--checkpoint", required=True)
+    parser.add_argument(
+        "--operating-points",
+        default="configs/evaluation/operating_points.yaml",
+    )
     parser.add_argument("--dataset-dir", type=Path, required=True)
     parser.add_argument("--runs", type=int, default=50)
     parser.add_argument("--device", default="cuda:0")
-    parser.add_argument("--candidate-threshold", type=float, default=0.325)
-    parser.add_argument("--existence-threshold", type=float, default=0.55)
-    parser.add_argument("--confirmation-hits", type=int, default=2)
-    parser.add_argument("--retention-threshold", type=float, default=0.225)
-    parser.add_argument("--survival-warmup-frames", type=int, default=3)
+    parser.add_argument("--candidate-threshold", type=float)
+    parser.add_argument("--existence-threshold", type=float)
+    parser.add_argument("--confirmation-hits", type=int)
+    parser.add_argument("--retention-threshold", type=float)
+    parser.add_argument("--survival-warmup-frames", type=int)
     parser.add_argument("--first-scored-frame", type=int, default=20)
     parser.add_argument("--output", type=Path, required=True)
     arguments = parser.parse_args()
+    point = load_operating_point(arguments.operating_points, "cnsf")
+    if arguments.candidate_threshold is None:
+        arguments.candidate_threshold = float(point["candidate"])
+    if arguments.existence_threshold is None:
+        arguments.existence_threshold = float(point["existence"])
+    if arguments.confirmation_hits is None:
+        arguments.confirmation_hits = int(point["confirmation_hits"])
+    if arguments.retention_threshold is None:
+        arguments.retention_threshold = float(point["retention"])
+    if arguments.survival_warmup_frames is None:
+        arguments.survival_warmup_frames = int(point["survival_warmup_frames"])
 
     config = yaml.safe_load(Path(arguments.config).read_text(encoding="utf-8"))
     device = torch.device(arguments.device)

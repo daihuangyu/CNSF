@@ -15,16 +15,28 @@ included.
 
 ## Figures
 
-- [CNSF architecture](assets/cnsf_architecture.pdf)
-- [Qualitative comparison](assets/qualitative_comparison.pdf)
+<p align="center">
+  <img src="assets/cnsf_architecture.png" alt="CNSF architecture" width="100%">
+</p>
+
+<p align="center"><em>CNSF inference architecture and training scheme.</em></p>
+
+<p align="center">
+  <img src="assets/qualitative_comparison.png" alt="Qualitative tracking comparison" width="100%">
+</p>
+
+<p align="center"><em>Qualitative comparison across the three evaluation scenarios.</em></p>
+
+Vector versions: [CNSF architecture](assets/cnsf_architecture.pdf) and
+[qualitative comparison](assets/qualitative_comparison.pdf).
 
 ## Model profiles
 
-| Method | Temporal carrier | Encoder / decoder | FFN | Parameters | Reported checkpoint |
-|---|---|---:|---:|---:|---:|
-| Track-MT3 | 20-frame window | 6 / 6 | 2048 | 19.38M | selected 14k |
-| Track-MT3-CM | 20-frame window | 3 / 3 | 1472 | 8.48M | exact 12k |
-| CNSF | recursive track state | 3 / 3 | 1024 | 8.54M | exact 12k |
+| Method | Temporal carrier | Encoder / decoder | FFN | Parameters |
+|---|---|---:|---:|---:|
+| Track-MT3 | 20-frame window | 6 / 6 | 2048 | 19.38M |
+| Track-MT3-CM | 20-frame window | 3 / 3 | 1472 | 8.48M |
+| CNSF | recursive track state | 3 / 3 | 1024 | 8.54M |
 
 Track-MT3-CM is a parameter/capacity-matched control, not a claim that the two
 models have the same backbone. Relative to Track-MT3, it changes only encoder
@@ -45,6 +57,7 @@ of Track-MT3.
 configs/
   paper.yaml                         shared simulation/model configuration
   experiments/scenario{1,2,3}.yaml  evaluation scenarios
+  evaluation/operating_points.yaml  frozen global operating points
   training/                          frozen training profiles
 scripts/
   train_track_mt3.py                 Track-MT3 training
@@ -168,6 +181,11 @@ The selector minimizes mean GOSPA over S1--S3 using only two Track-MT3 knobs:
 the shared existence/QTM detection threshold and the QTM tracking threshold.
 Freeze the selected pair before formal evaluation.
 
+All frozen thresholds are kept in
+[`configs/evaluation/operating_points.yaml`](configs/evaluation/operating_points.yaml),
+separate from this README. The evaluators load that file by default; command-line
+threshold options remain available only for controlled sweeps.
+
 ## Accuracy evaluation
 
 ### Track-MT3
@@ -180,14 +198,11 @@ PYTHONPATH=. python3 scripts/evaluate_track_mt3.py \
   --expected-step 14000 \
   --dataset-dir datasets/track_mt3_paper/evaluation \
   --runs 50 \
-  --existence-threshold 0.75 \
-  --tracking-threshold 0.90 \
+  --operating-points configs/evaluation/operating_points.yaml \
   --output outputs/track_mt3/evaluation.json
 ```
 
 ### Track-MT3-CM
-
-Replace the example thresholds below with the frozen validation result:
 
 ```bash
 PYTHONPATH=. python3 scripts/evaluate_track_mt3.py \
@@ -198,8 +213,7 @@ PYTHONPATH=. python3 scripts/evaluate_track_mt3.py \
   --expected-step 12000 \
   --dataset-dir datasets/track_mt3_paper/evaluation \
   --runs 50 \
-  --existence-threshold 0.70 \
-  --tracking-threshold 0.75 \
+  --operating-points configs/evaluation/operating_points.yaml \
   --output outputs/track_mt3_cm_exact12k/evaluation.json
 ```
 
@@ -214,15 +228,7 @@ PYTHONPATH=. python3 scripts/evaluate_cnsf.py \
   --config configs/training/cnsf_exact12k.yaml \
   --checkpoint outputs/cnsf_exact12k/checkpoints/step_012000.pt \
   --runs 50 \
-  --candidate-thresholds 0.325 \
-  --output-thresholds 0.68 \
-  --existence-thresholds 0.55 \
-  --confirmation-hits 2 \
-  --death-state-modes predicted \
-  --retention-thresholds 0.225 \
-  --survival-warmup-frames 3 \
-  --truth-free-model-input \
-  --fast-inference \
+  --operating-points configs/evaluation/operating_points.yaml \
   --output outputs/cnsf_exact12k/evaluation.json
 ```
 
@@ -234,6 +240,7 @@ PYTHONPATH=. python3 scripts/evaluate_cnsf_tgospa.py \
   --checkpoint outputs/cnsf_exact12k/checkpoints/step_012000.pt \
   --dataset-dir datasets/track_mt3_paper/evaluation \
   --runs 50 \
+  --operating-points configs/evaluation/operating_points.yaml \
   --output outputs/cnsf_exact12k/tgospa.json
 ```
 
@@ -252,6 +259,7 @@ OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
 NUMEXPR_NUM_THREADS=1 PYTHONPATH=. \
 python3 scripts/benchmark_neural_inference.py \
   --device cpu --models track_mt3 --threads 1 --repeats 5 \
+  --operating-points configs/evaluation/operating_points.yaml \
   --track-mt3-config configs/training/track_mt3_cm_exact12k.yaml \
   --track-mt3-checkpoint outputs/track_mt3_cm_exact12k/checkpoints/step_012000.pt \
   --trajectory datasets/track_mt3_paper/evaluation/scenario3/run_000.npz \
@@ -267,6 +275,7 @@ OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
 NUMEXPR_NUM_THREADS=1 PYTHONPATH=. \
 python3 scripts/benchmark_neural_inference.py \
   --device cpu --models cnsf --threads 1 --repeats 5 \
+  --operating-points configs/evaluation/operating_points.yaml \
   --cnsf-config configs/training/cnsf_exact12k.yaml \
   --cnsf-checkpoint outputs/cnsf_exact12k/checkpoints/step_012000.pt \
   --trajectory datasets/track_mt3_paper/evaluation/scenario3/run_000.npz \
