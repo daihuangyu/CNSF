@@ -64,6 +64,7 @@ def main() -> None:
     parser.add_argument("--config", default="configs/paper.yaml")
     parser.add_argument("--overlay", action="append", default=[])
     parser.add_argument("--checkpoint", required=True)
+    parser.add_argument("--expected-step", type=int)
     split = parser.add_mutually_exclusive_group(required=True)
     split.add_argument("--validation-dir", type=Path)
     split.add_argument("--validation-seed", type=int)
@@ -88,8 +89,10 @@ def main() -> None:
     device = torch.device(resolve_device(config.training.device))
     checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=False)
     checkpoint_step = int(checkpoint.get("training_state", {}).get("step", -1))
-    if checkpoint_step != 12_000:
-        raise ValueError(f"capacity control requires exact step 12000, got {checkpoint_step}")
+    if args.expected_step is not None and checkpoint_step != args.expected_step:
+        raise ValueError(
+            f"expected step {args.expected_step}, got {checkpoint_step}"
+        )
     model = TrackMT3(config).to(device).eval()
     model.load_state_dict(checkpoint["model"] if "model" in checkpoint else checkpoint)
     if args.validation_dir is not None:

@@ -203,7 +203,7 @@ def main() -> None:
         description="Evaluate learned tentative births while death remains oracle"
     )
     parser.add_argument(
-        "--config", default="configs/training/cnsf_exact12k.yaml"
+        "--config", default="configs/training/cnsf.yaml"
     )
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument(

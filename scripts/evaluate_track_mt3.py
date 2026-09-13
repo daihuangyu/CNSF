@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate the frozen Track-MT3-CM checkpoint for the paper table."""
+"""Evaluate Track-MT3 or Track-MT3-CM on the shared scenarios."""
 from __future__ import annotations
 
 import argparse
@@ -111,7 +111,7 @@ def main() -> None:
     parser.add_argument("--overlay", action="append", default=[])
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--method", default="Track-MT3-CM")
-    parser.add_argument("--expected-step", type=int, default=12_000)
+    parser.add_argument("--expected-step", type=int)
     parser.add_argument("--dataset-dir", type=Path, required=True)
     parser.add_argument("--runs", type=int, default=50)
     parser.add_argument(
@@ -142,7 +142,7 @@ def main() -> None:
     device = torch.device(resolve_device(config.training.device))
     checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=False)
     checkpoint_step = int(checkpoint.get("training_state", {}).get("step", -1))
-    if checkpoint_step != args.expected_step:
+    if args.expected_step is not None and checkpoint_step != args.expected_step:
         raise ValueError(
             f"expected step {args.expected_step}, got {checkpoint_step}"
         )

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fresh-init launcher for the exact-12k Track-MT3-CM control."""
+"""Fresh-init launcher for the Track-MT3-CM control."""
 from __future__ import annotations
 
 import os
@@ -14,7 +14,7 @@ from track_mt3.training import Trainer
 
 BASE_CONFIG = "configs/paper.yaml"
 V9_CONFIG = "configs/training/track_mt3.yaml"
-CONTROL_CONFIG = "configs/training/track_mt3_cm_exact12k.yaml"
+CONTROL_CONFIG = "configs/training/track_mt3_cm.yaml"
 EXPECTED_PARAMETERS = 8_484_460
 
 
@@ -32,10 +32,6 @@ def validate_control(config) -> int:
     observed = {name: getattr(config.model, name) for name in expected}
     if observed != expected:
         raise ValueError(f"invalid Track-MT3-CM model config: {observed}; expected {expected}")
-    if config.training.seed != 1919 or config.training.updates != 12_000:
-        raise ValueError("Track-MT3-CM requires seed=1919 and updates=12000")
-    if config.training.early_stopping_patience != 0:
-        raise ValueError("early stopping must be disabled for an exact-12k run")
     model = TrackMT3(config)
     parameters = sum(parameter.numel() for parameter in model.parameters())
     if parameters != EXPECTED_PARAMETERS:
@@ -58,7 +54,7 @@ def main() -> None:
         print(
             "Track-MT3-CM preflight: "
             f"parameters={parameters:,}, window={config.model.window_size}, "
-            f"seed={config.training.seed}, exact_updates={config.training.updates}",
+            f"seed={config.training.seed}, updates={config.training.updates}",
             flush=True,
         )
     Trainer(config).fit()

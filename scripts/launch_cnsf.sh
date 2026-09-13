@@ -7,6 +7,6 @@ exec torchrun \
     --standalone \
     --nproc_per_node="${nproc_per_node}" \
     scripts/train_cnsf.py \
-    --config configs/training/cnsf_exact12k.yaml \
-    --output-dir outputs/cnsf_exact12k \
+    --config configs/training/cnsf.yaml \
+    --output-dir outputs/cnsf \
     "$@"

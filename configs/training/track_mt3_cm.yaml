@@ -1,0 +1,22 @@
+# Track-MT3-CM: parameter-matched control for CNSF.
+#
+# This file is an overlay on configs/paper.yaml and
+# configs/training/track_mt3.yaml. Keep it deliberately small: the capacity
+# intervention is (6E, 6D, FFN=2048) -> (3E, 3D, FFN=1472).
+model:
+  encoder_layers: 3
+  decoder_layers: 3
+  feedforward_dim: 1472
+
+training:
+  seed: 1919
+  updates: 12000
+  checkpoint_interval: 2000
+  checkpoint_keep: 8
+  # Evaluation is a separate post-training phase for this reference profile.
+  evaluate_on_checkpoint: false
+  early_stopping_patience: 0
+  output_dir: outputs/track_mt3_cm
+  # Logging only: wandb is not installed in the frozen training environment.
+  wandb_enabled: false
+  wandb_run_name: track-mt3-cm

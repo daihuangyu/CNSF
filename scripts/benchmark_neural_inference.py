@@ -178,11 +178,11 @@ def main() -> None:
     )
     parser.add_argument(
         "--cnsf-config",
-        default="configs/training/cnsf_exact12k.yaml",
+        default="configs/training/cnsf.yaml",
     )
     parser.add_argument(
         "--cnsf-checkpoint",
-        default="outputs/cnsf_exact12k/checkpoints/step_012000.pt",
+        default="outputs/cnsf/checkpoints/final.pt",
     )
     parser.add_argument("--compile-association", action="store_true")
     parser.add_argument(

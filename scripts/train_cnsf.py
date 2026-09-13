@@ -109,7 +109,7 @@ def main() -> None:
         description="Train CNSF end to end from a fresh initialization"
     )
     parser.add_argument(
-        "--config", default="configs/training/cnsf_exact12k.yaml"
+        "--config", default="configs/training/cnsf.yaml"
     )
     parser.add_argument("--updates", type=int)
     parser.add_argument("--output-dir")

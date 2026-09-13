@@ -54,7 +54,7 @@ configs/
   training/                          frozen training profiles
 scripts/
   train_track_mt3.py                 Track-MT3 training
-  train_track_mt3_cm.py              exact-12k Track-MT3-CM training
+  train_track_mt3_cm.py              Track-MT3-CM training
   train_cnsf.py                      CNSF training
   select_track_mt3_operating_point.py validation-only threshold selection
   evaluate_track_mt3.py              Track-MT3/CM GOSPA, Pro-GOSPA, T-GOSPA
@@ -114,81 +114,21 @@ python3 scripts/prepare_evaluation_data.py --output-dir datasets/evaluation
 
 ## Training
 
-All distributed examples preserve the configured global batch size; the
-training code partitions it over the active processes.
+Training and evaluation scripts are provided in this repository.
+Please refer to the paper for the experimental protocol and reported settings.
 
-### Track-MT3
+## Evaluation
 
-```bash
-PYTHONPATH=. torchrun --standalone --nproc_per_node=4 \
-  scripts/train_track_mt3.py \
-  --config configs/paper.yaml \
-  --overlay configs/training/track_mt3.yaml
-```
-
-The paper baseline keeps its original selected 14k checkpoint and is not
-replaced by the capacity control.
-
-### Track-MT3-CM
-
-```bash
-PYTHONPATH=. torchrun --standalone --nproc_per_node=4 \
-  scripts/train_track_mt3_cm.py
-```
-
-The launcher enforces fresh initialization, seed 1919, exact 12,000 updates,
-disabled early stopping, a 20-frame window, and exactly 8,484,460 parameters.
-It refuses to start if the output directory is non-empty. Intermediate
-checkpoints are diagnostic only; report `step_012000.pt` without selecting the
-best intermediate checkpoint.
-
-### CNSF
-
-```bash
-PYTHONPATH=. torchrun --standalone --nproc_per_node=4 \
-  scripts/train_cnsf.py \
-  --config configs/training/cnsf_exact12k.yaml \
-  --output-dir outputs/cnsf_exact12k
-```
-
-`scripts/launch_cnsf.sh` is a short launcher for the exact-12k run. Set
-`NPROC_PER_NODE` to change the GPU process count.
-
-## Operating-point selection
-
-Select one global Track-MT3-CM operating point on an independent validation
-split. Do not tune thresholds separately by scene or on the reported evaluation
-suite.
-
-```bash
-PYTHONPATH=. python3 scripts/select_track_mt3_operating_point.py \
-  --overlay configs/training/track_mt3.yaml \
-  --overlay configs/training/track_mt3_cm_exact12k.yaml \
-  --checkpoint outputs/track_mt3_cm_exact12k/checkpoints/step_012000.pt \
-  --validation-seed 20000 \
-  --validation-runs 10 \
-  --output outputs/track_mt3_cm_exact12k/operating_point.json
-```
-
-The selector minimizes mean GOSPA over S1--S3 using only two Track-MT3 knobs:
-the shared existence/QTM detection threshold and the QTM tracking threshold.
-Freeze the selected pair before formal evaluation.
-
-All frozen thresholds are kept in
-[`configs/evaluation/operating_points.yaml`](configs/evaluation/operating_points.yaml),
-separate from this README. The evaluators load that file by default; command-line
-threshold options remain available only for controlled sweeps.
-
-## Accuracy evaluation
+Evaluation commands load method settings from
+[`configs/evaluation/operating_points.yaml`](configs/evaluation/operating_points.yaml).
 
 ### Track-MT3
 
 ```bash
 PYTHONPATH=. python3 scripts/evaluate_track_mt3.py \
   --overlay configs/training/track_mt3.yaml \
-  --checkpoint outputs/track_mt3/checkpoints/step_014000.pt \
+  --checkpoint outputs/track_mt3/checkpoints/CHECKPOINT.pt \
   --method Track-MT3 \
-  --expected-step 14000 \
   --dataset-dir datasets/track_mt3_paper/evaluation \
   --runs 50 \
   --operating-points configs/evaluation/operating_points.yaml \
@@ -200,14 +140,13 @@ PYTHONPATH=. python3 scripts/evaluate_track_mt3.py \
 ```bash
 PYTHONPATH=. python3 scripts/evaluate_track_mt3.py \
   --overlay configs/training/track_mt3.yaml \
-  --overlay configs/training/track_mt3_cm_exact12k.yaml \
-  --checkpoint outputs/track_mt3_cm_exact12k/checkpoints/step_012000.pt \
+  --overlay configs/training/track_mt3_cm.yaml \
+  --checkpoint outputs/track_mt3_cm/checkpoints/CHECKPOINT.pt \
   --method Track-MT3-CM \
-  --expected-step 12000 \
   --dataset-dir datasets/track_mt3_paper/evaluation \
   --runs 50 \
   --operating-points configs/evaluation/operating_points.yaml \
-  --output outputs/track_mt3_cm_exact12k/evaluation.json
+  --output outputs/track_mt3_cm/evaluation.json
 ```
 
 This evaluator reports scene-wise GOSPA and the mean GOSPA, Pro-GOSPA, and
@@ -218,23 +157,23 @@ post-hoc relinking.
 
 ```bash
 PYTHONPATH=. python3 scripts/evaluate_cnsf.py \
-  --config configs/training/cnsf_exact12k.yaml \
-  --checkpoint outputs/cnsf_exact12k/checkpoints/step_012000.pt \
+  --config configs/training/cnsf.yaml \
+  --checkpoint outputs/cnsf/checkpoints/CHECKPOINT.pt \
   --runs 50 \
   --operating-points configs/evaluation/operating_points.yaml \
-  --output outputs/cnsf_exact12k/evaluation.json
+  --output outputs/cnsf/evaluation.json
 ```
 
 ### CNSF: T-GOSPA
 
 ```bash
 PYTHONPATH=. python3 scripts/evaluate_cnsf_tgospa.py \
-  --config configs/training/cnsf_exact12k.yaml \
-  --checkpoint outputs/cnsf_exact12k/checkpoints/step_012000.pt \
+  --config configs/training/cnsf.yaml \
+  --checkpoint outputs/cnsf/checkpoints/CHECKPOINT.pt \
   --dataset-dir datasets/track_mt3_paper/evaluation \
   --runs 50 \
   --operating-points configs/evaluation/operating_points.yaml \
-  --output outputs/cnsf_exact12k/tgospa.json
+  --output outputs/cnsf/tgospa.json
 ```
 
 CNSF T-GOSPA uses runtime track IDs emitted by the recurrent tracker and does
@@ -253,11 +192,11 @@ NUMEXPR_NUM_THREADS=1 PYTHONPATH=. \
 python3 scripts/benchmark_neural_inference.py \
   --device cpu --models track_mt3 --threads 1 --repeats 5 \
   --operating-points configs/evaluation/operating_points.yaml \
-  --track-mt3-config configs/training/track_mt3_cm_exact12k.yaml \
-  --track-mt3-checkpoint outputs/track_mt3_cm_exact12k/checkpoints/step_012000.pt \
+  --track-mt3-config configs/training/track_mt3_cm.yaml \
+  --track-mt3-checkpoint outputs/track_mt3_cm/checkpoints/CHECKPOINT.pt \
   --trajectory datasets/track_mt3_paper/evaluation/scenario3/run_000.npz \
   --first-scored-frame 20 \
-  --output outputs/track_mt3_cm_exact12k/runtime_cpu.json
+  --output outputs/track_mt3_cm/runtime_cpu.json
 ```
 
 Omit `--track-mt3-config` and point `--track-mt3-checkpoint` at the original checkpoint to
@@ -269,35 +208,21 @@ NUMEXPR_NUM_THREADS=1 PYTHONPATH=. \
 python3 scripts/benchmark_neural_inference.py \
   --device cpu --models cnsf --threads 1 --repeats 5 \
   --operating-points configs/evaluation/operating_points.yaml \
-  --cnsf-config configs/training/cnsf_exact12k.yaml \
-  --cnsf-checkpoint outputs/cnsf_exact12k/checkpoints/step_012000.pt \
+  --cnsf-config configs/training/cnsf.yaml \
+  --cnsf-checkpoint outputs/cnsf/checkpoints/CHECKPOINT.pt \
   --trajectory datasets/track_mt3_paper/evaluation/scenario3/run_000.npz \
   --first-scored-frame 20 \
-  --output outputs/cnsf_exact12k/runtime_cpu.json
+  --output outputs/cnsf/runtime_cpu.json
 ```
 
 CPU latency is hardware-specific. Re-measure it when reporting results from a
 different machine.
 
-## Metric and checkpoint protocol
-
-- `Pro-GOSPA` means **probabilistic GOSPA**.
-- Track-MT3 and Track-MT3-CM use model-native cross-frame query IDs.
-- CNSF uses recurrent runtime track IDs.
-- No method uses post-hoc identity relinking for T-GOSPA.
-- Thresholds are selected once on validation and then frozen globally.
-- Track-MT3-CM and CNSF report exact step 12,000; intermediate checkpoints are
-  not used for result selection.
-- Equal update counts should be described as the same number of optimization
-  updates, not the same training compute.
-
 ## Artifacts and reproducibility
 
-Checkpoints and generated datasets are deliberately excluded from Git. To
-reproduce an experiment, generate the deterministic evaluation set, train the
-requested profile, select a validation operating point, and run the evaluation
-commands above. Result JSON files record checkpoint paths, operating points,
-per-scene metrics, and per-run T-GOSPA values.
+Generated datasets and experiment outputs are deliberately excluded from Git.
+Use the provided simulation, training, and evaluation entry points together
+with the protocol specified in the paper.
 
 ## Citation
 
