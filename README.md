@@ -21,14 +21,7 @@ included.
 
 <p align="center"><em>CNSF inference architecture and training scheme.</em></p>
 
-<p align="center">
-  <img src="assets/qualitative_comparison.png" alt="Qualitative tracking comparison" width="100%">
-</p>
-
-<p align="center"><em>Qualitative comparison across the three evaluation scenarios.</em></p>
-
-Vector versions: [CNSF architecture](assets/cnsf_architecture.pdf) and
-[qualitative comparison](assets/qualitative_comparison.pdf).
+Vector version: [CNSF architecture](assets/cnsf_architecture.pdf).
 
 ## Model profiles
 
